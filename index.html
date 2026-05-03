@@ -555,6 +555,42 @@
   // ============================================================
   // GERAR PDF com jsPDF
   // ============================================================
+  // Converte caracteres unicode nao suportados pelo jsPDF para equivalentes normais
+  function sanitizarTexto(str) {
+    const superscripts = {
+      '⁰':'0','¹':'1','²':'2','³':'3','⁴':'4',
+      '⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9',
+      '⁺':'+','⁻':'-','⁼':'=','⁽':'(','⁾':')',
+      'ⁿ':'n'
+    };
+    const subscripts = {
+      '₀':'0','₁':'1','₂':'2','₃':'3','₄':'4',
+      '₅':'5','₆':'6','₇':'7','₈':'8','₉':'9',
+      '₊':'+','₋':'-','₌':'=','₍':'(','₎':')'
+    };
+    // Substitui super/subscripts por equivalentes normais
+    let result = '';
+    for (const ch of str) {
+      if (superscripts[ch]) result += superscripts[ch];
+      else if (subscripts[ch]) result += subscripts[ch];
+      else {
+        // Remove qualquer outro caractere fora do range latin + common symbols
+        const code = ch.codePointAt(0);
+        if (code <= 0x024F || (code >= 0x2000 && code <= 0x206F) ||
+            (code >= 0x20A0 && code <= 0x20CF) || ch === 'ç' ||
+            (code >= 0x00C0 && code <= 0x00FF)) {
+          result += ch;
+        } else if (code > 0x024F && code < 0x2000) {
+          // letras latinas estendidas - manter
+          result += ch;
+        } else {
+          result += ch; // mantém por padrao, jsPDF vai ignorar o que nao conhece
+        }
+      }
+    }
+    return result;
+  }
+
   function abrirModal() {
     if (frases.length === 0) return;
     document.getElementById('modal-overlay').classList.add('open');
@@ -624,6 +660,9 @@
 
       // ——— Linha decorativa inferior ———
       doc.line(MARGEM, ALTURA - 14, LARGURA - MARGEM, ALTURA - 14);
+
+      // Sanitiza caracteres que o jsPDF nao suporta (superscripts, subscripts, etc)
+      frase = sanitizarTexto(frase);
 
       // Largura util e altura util disponiveis
       const larguraTexto = LARGURA - MARGEM * 2;
