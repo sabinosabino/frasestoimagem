@@ -318,6 +318,73 @@
       .btn-row { flex-direction: column; }
       button { width: 100%; justify-content: center; }
     }
+
+    /* ============================================================
+       MODAL NOME DO PDF
+    ============================================================ */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.8rem;
+      width: min(420px, 92vw);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      animation: modalIn 0.2s ease;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.95) translateY(10px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .modal h2 {
+      font-family: var(--font-head);
+      font-size: 1.3rem;
+      color: var(--text);
+    }
+    .modal p { font-size: 0.85rem; color: var(--muted); }
+    .modal input[type="text"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      padding: 0.75rem 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .modal input[type="text"]:focus { border-color: var(--accent); }
+    .modal .suffix {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+    .modal .suffix input { border-radius: 8px 0 0 8px; }
+    .modal .suffix span {
+      background: var(--border);
+      color: var(--muted);
+      padding: 0.75rem 0.9rem;
+      border: 1px solid var(--border);
+      border-left: none;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.88rem;
+      white-space: nowrap;
+    }
+    .modal .btn-row { margin-top: 0.3rem; }
   </style>
 </head>
 <body>
@@ -369,13 +436,29 @@
         <p class="pdf-hint">
           Cada frase ocupará uma página inteira no PDF, centralizada horizontal e verticalmente, com fonte ajustada automaticamente ao tamanho do texto.
         </p>
-        <button class="btn-pdf" id="btn-pdf" onclick="gerarPDF()" disabled>
+        <button class="btn-pdf" id="btn-pdf" onclick="abrirModal()" disabled>
           📄 Gerar PDF
         </button>
       </div>
     </section>
 
-  </main>
+  
+  <!-- Modal: nome do PDF -->
+  <div class="modal-overlay" id="modal-overlay" onclick="fecharModal(event)">
+    <div class="modal">
+      <h2>Nome do arquivo</h2>
+      <p>Escolha o nome do PDF que será gerado.</p>
+      <div class="suffix">
+        <input type="text" id="nome-pdf" value="frases" placeholder="nome-do-arquivo" maxlength="80" />
+        <span>.pdf</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn-pdf" onclick="confirmarPDF()">📄 Gerar PDF</button>
+        <button class="btn-ghost" onclick="fecharModalDireto()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</main>
 
   <!-- Toast de feedback -->
   <div id="toast"></div>
@@ -384,7 +467,13 @@
   // ============================================================
   // ESTADO DA APLICAÇÃO
   // ============================================================
-  let frases = []; // Array de strings com as frases adicionadas
+  // Carrega frases salvas no localStorage ao iniciar
+  let frases = JSON.parse(localStorage.getItem('frases_pdf') || '[]');
+
+  // Salva frases no localStorage sempre que mudar
+  function salvarStorage() {
+    localStorage.setItem('frases_pdf', JSON.stringify(frases));
+  }
 
   // ============================================================
   // ADICIONAR FRASES ao estado e à lista visual
@@ -401,6 +490,7 @@
     }
 
     frases = [...frases, ...novas];
+    salvarStorage();
     renderizarLista();
     textarea.value = '';
     toast(`✓ Frase adicionada.`);
@@ -411,6 +501,7 @@
   // ============================================================
   function removerFrase(index) {
     frases.splice(index, 1);
+    salvarStorage();
     renderizarLista();
   }
 
@@ -420,6 +511,7 @@
   function limparTudo() {
     if (frases.length === 0) return;
     frases = [];
+    salvarStorage();
     renderizarLista();
     toast('🗑 Lista limpa.');
   }
@@ -463,7 +555,40 @@
   // ============================================================
   // GERAR PDF com jsPDF
   // ============================================================
-  function gerarPDF() {
+  function abrirModal() {
+    if (frases.length === 0) return;
+    document.getElementById('modal-overlay').classList.add('open');
+    const input = document.getElementById('nome-pdf');
+    input.focus();
+    input.select();
+  }
+
+  function fecharModalDireto() {
+    document.getElementById('modal-overlay').classList.remove('open');
+  }
+
+  function fecharModal(e) {
+    if (e.target === document.getElementById('modal-overlay')) fecharModalDireto();
+  }
+
+  function confirmarPDF() {
+    let nome = document.getElementById('nome-pdf').value.trim() || 'frases';
+    // Remove extensão se o usuario já digitou .pdf
+    nome = nome.replace(/\.pdf$/i, '');
+    fecharModalDireto();
+    gerarPDF(nome);
+  }
+
+  // Enter no input do modal confirma
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('nome-pdf').addEventListener('keydown', e => {
+      if (e.key === 'Enter') confirmarPDF();
+      if (e.key === 'Escape') fecharModalDireto();
+    });
+  });
+
+  function gerarPDF(nomeArquivo) {
+    nomeArquivo = nomeArquivo || 'frases';
     if (frases.length === 0) return;
 
     const { jsPDF } = window.jspdf;
@@ -531,7 +656,7 @@
       });
     });
 
-    doc.save('frases.pdf');
+    doc.save(nomeArquivo + '.pdf');
     toast('📄 PDF gerado com sucesso!');
   }
 
@@ -576,6 +701,9 @@
   // ============================================================
   // ATALHO: Enter com Ctrl/Cmd adiciona frases
   // ============================================================
+  // Renderiza frases salvas ao carregar a pagina
+  renderizarLista();
+
   document.getElementById('input-frases').addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       adicionarFrases();
