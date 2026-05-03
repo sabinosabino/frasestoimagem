@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Frases em PDF</title>
+
+  <!-- jsPDF via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ============================================================
+       RESET & VARIÁVEIS
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0e0e11;
+      --surface:   #17171c;
+      --border:    #2a2a33;
+      --accent:    #e8c97d;
+      --accent2:   #c9a45a;
+      --text:      #f0ece4;
+      --muted:     #7a7887;
+      --danger:    #e06060;
+      --success:   #6ccb8e;
+      --radius:    12px;
+      --font-head: 'Playfair Display', Georgia, serif;
+      --font-body: 'DM Sans', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-weight: 300;
+      min-height: 100vh;
+      padding: 2rem 1rem 4rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ============================================================
+       CABEÇALHO
+    ============================================================ */
+    header {
+      text-align: center;
+      margin-bottom: 2.8rem;
+      max-width: 640px;
+      width: 100%;
+    }
+
+    header .badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+
+    header h1 {
+      font-family: var(--font-head);
+      font-size: clamp(2rem, 6vw, 3.4rem);
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    header h1 span { color: var(--accent); }
+
+    header p {
+      margin-top: 0.7rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    /* ============================================================
+       LAYOUT PRINCIPAL
+    ============================================================ */
+    .app {
+      width: 100%;
+      max-width: 680px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* ============================================================
+       CARD GENÉRICO
+    ============================================================ */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.4rem;
+    }
+
+    .card-title {
+      font-size: 0.72rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+
+    /* ============================================================
+       TEXTAREA
+    ============================================================ */
+    textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      font-weight: 300;
+      line-height: 1.7;
+      padding: 0.9rem 1rem;
+      resize: vertical;
+      min-height: 120px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus { border-color: var(--accent); }
+    textarea::placeholder { color: var(--muted); }
+
+    /* ============================================================
+       BOTÕES
+    ============================================================ */
+    .btn-row {
+      display: flex;
+      gap: 0.7rem;
+      flex-wrap: wrap;
+      margin-top: 0.9rem;
+    }
+
+    button {
+      font-family: var(--font-body);
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      padding: 0.6rem 1.2rem;
+      transition: transform 0.1s, opacity 0.2s, background 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    button:active { transform: scale(0.96); }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0e0e11;
+      font-weight: 600;
+    }
+    .btn-primary:hover { background: var(--accent2); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--text); }
+
+    .btn-pdf {
+      background: var(--success);
+      color: #0e0e11;
+      font-weight: 700;
+      font-size: 0.95rem;
+      padding: 0.75rem 1.6rem;
+    }
+    .btn-pdf:hover { opacity: 0.88; }
+    .btn-pdf:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .btn-danger-ghost {
+      background: transparent;
+      color: var(--danger);
+      border: 1px solid transparent;
+      padding: 0.3rem 0.5rem;
+      font-size: 1rem;
+      border-radius: 6px;
+    }
+    .btn-danger-ghost:hover { background: rgba(224,96,96,0.12); }
+
+    /* ============================================================
+       LISTA DE FRASES
+    ============================================================ */
+    #lista-container {
+      max-height: 360px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .frase-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.8rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 0.9rem;
+      animation: slideIn 0.25s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .frase-num {
+      font-family: var(--font-head);
+      font-size: 0.8rem;
+      color: var(--accent);
+      min-width: 22px;
+      padding-top: 2px;
+    }
+
+    .frase-texto {
+      flex: 1;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      word-break: break-word;
+      color: var(--text);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .empty-state .ico { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
+
+    /* ============================================================
+       CONTADOR
+    ============================================================ */
+    .counter-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.9rem;
+    }
+
+    .counter-bar span {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .counter-bar strong { color: var(--accent); }
+
+    /* ============================================================
+       BOTÃO PDF
+    ============================================================ */
+    .pdf-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .pdf-hint {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* ============================================================
+       TOAST / FEEDBACK
+    ============================================================ */
+    #toast {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.7rem 1.3rem;
+      border-radius: 999px;
+      font-size: 0.87rem;
+      white-space: nowrap;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      opacity: 0;
+      z-index: 999;
+    }
+
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* ============================================================
+       RESPONSIVO
+    ============================================================ */
+    @media (max-width: 480px) {
+      .btn-row { flex-direction: column; }
+      button { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Cabeçalho -->
+  <header>
+    <div class="badge">✦ Gerador de PDF</div>
+    <h1>Frases em <span>Destaque</span></h1>
+    <p>Adicione suas frases abaixo e gere um PDF elegante com uma frase por página, centralizada e em fonte grande.</p>
+  </header>
+
+  <main class="app">
+
+    <!-- Card: Entrada de frases -->
+    <section class="card">
+      <p class="card-title">✦ Inserir frases</p>
+      <textarea
+        id="input-frases"
+        placeholder="Digite suas frases aqui, uma por linha...&#10;&#10;A vida é bela.&#10;Persista sempre.&#10;O tempo passa, as memórias ficam."
+        rows="5"
+      ></textarea>
+      <div class="btn-row">
+        <button class="btn-primary" onclick="adicionarFrases()">＋ Adicionar frases</button>
+        <button class="btn-ghost" onclick="limparEntrada()">Limpar campo</button>
+      </div>
+    </section>
+
+    <!-- Card: Lista de frases -->
+    <section class="card">
+      <div class="counter-bar">
+        <p class="card-title" style="margin-bottom:0">✦ Frases adicionadas</p>
+        <span><strong id="contador">0</strong> frases</span>
+      </div>
+      <div id="lista-container">
+        <div class="empty-state">
+          <span class="ico">🗒️</span>
+          Nenhuma frase adicionada ainda.
+        </div>
+      </div>
+      <div class="btn-row" style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+        <button class="btn-ghost" onclick="limparTudo()">🗑 Limpar tudo</button>
+      </div>
+    </section>
+
+    <!-- Card: Gerar PDF -->
+    <section class="card">
+      <p class="card-title">✦ Exportar</p>
+      <div class="pdf-section">
+        <p class="pdf-hint">
+          Cada frase ocupará uma página inteira no PDF, centralizada horizontal e verticalmente, com fonte ajustada automaticamente ao tamanho do texto.
+        </p>
+        <button class="btn-pdf" id="btn-pdf" onclick="gerarPDF()" disabled>
+          📄 Gerar PDF
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toast de feedback -->
+  <div id="toast"></div>
+
+<script>
+  // ============================================================
+  // ESTADO DA APLICAÇÃO
+  // ============================================================
+  let frases = []; // Array de strings com as frases adicionadas
+
+  // ============================================================
+  // ADICIONAR FRASES ao estado e à lista visual
+  // ============================================================
+  function adicionarFrases() {
+    const textarea = document.getElementById('input-frases');
+    const linhas = textarea.value.split('\n');
+
+    // Filtra linhas vazias e espaços extras
+    const novas = linhas
+      .map(l => l.trim())
+      .filter(l => l.length > 0);
+
+    if (novas.length === 0) {
+      toast('⚠️ Nenhuma frase válida encontrada.');
+      return;
+    }
+
+    frases = [...frases, ...novas];
+    renderizarLista();
+    textarea.value = '';
+    toast(`✓ ${novas.length} frase(s) adicionada(s).`);
+  }
+
+  // ============================================================
+  // REMOVER frase individual pelo índice
+  // ============================================================
+  function removerFrase(index) {
+    frases.splice(index, 1);
+    renderizarLista();
+  }
+
+  // ============================================================
+  // LIMPAR TUDO
+  // ============================================================
+  function limparTudo() {
+    if (frases.length === 0) return;
+    frases = [];
+    renderizarLista();
+    toast('🗑 Lista limpa.');
+  }
+
+  // ============================================================
+  // LIMPAR CAMPO DE ENTRADA
+  // ============================================================
+  function limparEntrada() {
+    document.getElementById('input-frases').value = '';
+  }
+
+  // ============================================================
+  // RENDERIZAR a lista visual de frases
+  // ============================================================
+  function renderizarLista() {
+    const container = document.getElementById('lista-container');
+    const contador  = document.getElementById('contador');
+    const btnPdf    = document.getElementById('btn-pdf');
+
+    contador.textContent = frases.length;
+    btnPdf.disabled = frases.length === 0;
+
+    if (frases.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <span class="ico">🗒️</span>
+          Nenhuma frase adicionada ainda.
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = frases.map((frase, i) => `
+      <div class="frase-item" id="item-${i}">
+        <span class="frase-num">${i + 1}</span>
+        <span class="frase-texto">${escapeHtml(frase)}</span>
+        <button class="btn-danger-ghost" onclick="removerFrase(${i})" title="Remover">✕</button>
+      </div>
+    `).join('');
+  }
+
+  // ============================================================
+  // GERAR PDF com jsPDF
+  // ============================================================
+  function gerarPDF() {
+    if (frases.length === 0) return;
+
+    const { jsPDF } = window.jspdf;
+
+    // Cria documento A4 em landscape para textos longos ficarem melhor
+    // Usando portrait para textos mais curtos / uso geral
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    const LARGURA  = doc.internal.pageSize.getWidth();   // 210 mm
+    const ALTURA   = doc.internal.pageSize.getHeight();  // 297 mm
+    const MARGEM   = 18; // mm
+
+    frases.forEach((frase, index) => {
+      if (index > 0) doc.addPage();
+
+      // ——— Fundo suave ———
+      doc.setFillColor(248, 246, 240); // creme levíssimo
+      doc.rect(0, 0, LARGURA, ALTURA, 'F');
+
+      // ——— Linha decorativa superior ———
+      doc.setDrawColor(200, 170, 90);
+      doc.setLineWidth(0.7);
+      doc.line(MARGEM, 14, LARGURA - MARGEM, 14);
+
+      // ——— Número da página (canto inferior direito) ———
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(180, 170, 150);
+      doc.text(`${index + 1} / ${frases.length}`, LARGURA - MARGEM, ALTURA - 10, { align: 'right' });
+
+      // ——— Linha decorativa inferior ———
+      doc.line(MARGEM, ALTURA - 14, LARGURA - MARGEM, ALTURA - 14);
+
+      // ——— Tamanho de fonte automático ———
+      const fontSize = calcularFontSize(frase);
+      doc.setFont('times', 'bold');   // Serifado para elegância
+      doc.setFontSize(fontSize);
+      doc.setTextColor(30, 28, 25);
+
+      // ——— Quebra de linha automática ———
+      const larguraTexto = LARGURA - MARGEM * 2;
+      const linhas = doc.splitTextToSize(frase, larguraTexto);
+
+      // ——— Centralização vertical ———
+      const alturaLinha   = fontSize * 0.3527 * 1.35; // pt → mm com leading
+      const alturaTotal   = linhas.length * alturaLinha;
+      const yInicio       = (ALTURA - alturaTotal) / 2 + alturaLinha * 0.7;
+
+      // ——— Escrita centralizada horizontal ———
+      doc.text(linhas, LARGURA / 2, yInicio, {
+        align: 'center',
+        lineHeightFactor: 1.35
+      });
+    });
+
+    doc.save('frases.pdf');
+    toast('📄 PDF gerado com sucesso!');
+  }
+
+  // ============================================================
+  // CÁLCULO automático do tamanho da fonte
+  // ============================================================
+  function calcularFontSize(frase) {
+    const len = frase.length;
+
+    if (len <= 20)  return 64;
+    if (len <= 40)  return 52;
+    if (len <= 70)  return 42;
+    if (len <= 100) return 34;
+    if (len <= 150) return 28;
+    if (len <= 220) return 22;
+    return 18;
+  }
+
+  // ============================================================
+  // TOAST de feedback visual
+  // ============================================================
+  let toastTimer = null;
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+  }
+
+  // ============================================================
+  // ESCAPE HTML para prevenir XSS na lista
+  // ============================================================
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ============================================================
+  // ATALHO: Enter com Ctrl/Cmd adiciona frases
+  // ============================================================
+  document.getElementById('input-frases').addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      adicionarFrases();
+    }
+  });
+</script>
+</body>
+</html>
