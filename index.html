@@ -391,12 +391,9 @@
   // ============================================================
   function adicionarFrases() {
     const textarea = document.getElementById('input-frases');
-    const linhas = textarea.value.split('\n');
-
-    // Filtra linhas vazias e espaços extras
-    const novas = linhas
-      .map(l => l.trim())
-      .filter(l => l.length > 0);
+    // Todo o conteúdo da caixa é tratado como UMA única frase,
+    // independente de quebras de linha ou espaços extras
+    const novas = [textarea.value.trim()].filter(l => l.length > 0);
 
     if (novas.length === 0) {
       toast('⚠️ Nenhuma frase válida encontrada.');
@@ -406,7 +403,7 @@
     frases = [...frases, ...novas];
     renderizarLista();
     textarea.value = '';
-    toast(`✓ ${novas.length} frase(s) adicionada(s).`);
+    toast(`✓ Frase adicionada.`);
   }
 
   // ============================================================
@@ -471,10 +468,9 @@
 
     const { jsPDF } = window.jspdf;
 
-    // Cria documento A4 em landscape para textos longos ficarem melhor
-    // Usando portrait para textos mais curtos / uso geral
+    // Documento A4 em modo paisagem (landscape)
     const doc = new jsPDF({
-      orientation: 'portrait',
+      orientation: 'landscape',
       unit: 'mm',
       format: 'a4'
     });
