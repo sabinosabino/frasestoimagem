@@ -500,25 +500,34 @@
       // ——— Linha decorativa inferior ———
       doc.line(MARGEM, ALTURA - 14, LARGURA - MARGEM, ALTURA - 14);
 
-      // ——— Tamanho de fonte automático ———
-      const fontSize = calcularFontSize(frase);
-      doc.setFont('times', 'bold');   // Serifado para elegância
-      doc.setFontSize(fontSize);
+      // Largura util e altura util disponiveis
+      const larguraTexto = LARGURA - MARGEM * 2;
+      const alturaUtil   = ALTURA - 40;
+
+      // Fonte helvetica (mais estavel no jsPDF)
+      doc.setFont('helvetica', 'bold');
       doc.setTextColor(30, 28, 25);
 
-      // ——— Quebra de linha automática ———
-      const larguraTexto = LARGURA - MARGEM * 2;
-      const linhas = doc.splitTextToSize(frase, larguraTexto);
+      // Ajuste automatico: comeca grande e reduz ate caber
+      let fontSize = calcularFontSize(frase);
+      let linhas, alturaTotal, alturaLinha;
 
-      // ——— Centralização vertical ———
-      const alturaLinha   = fontSize * 0.3527 * 1.35; // pt → mm com leading
-      const alturaTotal   = linhas.length * alturaLinha;
-      const yInicio       = (ALTURA - alturaTotal) / 2 + alturaLinha * 0.7;
+      while (fontSize >= 10) {
+        doc.setFontSize(fontSize);
+        linhas      = doc.splitTextToSize(frase, larguraTexto);
+        alturaLinha = fontSize * 0.3527 * 1.4;
+        alturaTotal = linhas.length * alturaLinha;
+        if (alturaTotal <= alturaUtil) break;
+        fontSize -= 2;
+      }
 
-      // ——— Escrita centralizada horizontal ———
+      // Centralizacao vertical
+      const yInicio = (ALTURA - alturaTotal) / 2 + alturaLinha * 0.75;
+
+      // Escrita centralizada horizontal
       doc.text(linhas, LARGURA / 2, yInicio, {
         align: 'center',
-        lineHeightFactor: 1.35
+        lineHeightFactor: 1.4
       });
     });
 
